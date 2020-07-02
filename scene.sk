@@ -1,0 +1,201 @@
+#	file: scene.sk
+#	author: Baezor
+#	version: 1.0.1
+options:
+	prefix: &6Scene &8»
+	invalidArgs: &cInvalid Arguments! Use /scene help for help!
+	loginErrorGamemode: survival
+
+	# DO NOT TOUCH!
+	version: 1.0.1
+	storage: scene
+command /scene [<text>] [<text>] [<number>] [<number>]:
+	permission: scene.admin
+	trigger:
+		if arg-1 is not set:
+			execute player command "/scene help"
+			exit
+		if arg-1 is "reload":
+			execute console command "/sk reload %script%"
+			exit
+		if arg-1 is "help":
+			send "&8&m                                                   " to player
+			send "&6&lScene Creator &7&o{@storage}-{@version}" to player
+			send "&8&m                                                   " to player
+			send "&7- &f/scene help" to player
+			send "&7- &f/scene reload" to player
+			send "&7- &f/scene create <name> <point> <ani-num>" to player
+			send "&7- &f/scene delete <name> <point>" to player
+			send "&7- &f/scene start <name>" to player
+			send "&8&m                                                   " to player
+			send "&7Animation Numbers:" to player
+			send "&6N: North &eS: South &6E: East &eW: West" to player
+			send "&6A: Above &eB: Below" to player
+			send "&7- &e1 &fNA &e2 &fSA &e3 &fEA &e4 &fWA" to player
+			send "&7- &e5 &fNB &e6 &fSB &e7 &fEB &e8 &fWB" to player
+			send "&8&m                                                   " to player
+			exit
+		if arg-1 is "create":
+			if arg-4 is set:
+				set {{@storage}::%arg-2%::%arg-3%::location} to player's location
+				set {{@storage}::%arg-2%::%arg-3%::movement} to arg-4
+				send "{@prefix} &7You created the scene point &f%arg-2%%arg-3%&7!" to player
+				exit
+			send "{@prefix} {@invalidArgs}" to player
+			exit
+		if arg-1 is "delete":
+			if arg-3 is set:
+				if {{@storage}::%arg-2%::%arg-3%::location} is set:
+					if {{@storage}::%arg-2%::%arg-3%::movement} is set:
+						delete {{@storage}::%arg-2%::%arg-3%::location}
+						delete {{@storage}::%arg-2%::%arg-3%::movement}
+						send "{@prefix} &7You deleted the scene point &f%arg-2%%arg-3%&7!" to player
+						exit
+			send "{@prefix} {@invalidArgs}" to player
+			exit
+		if arg-1 is "start":
+			if arg-2 is set:
+				if {logLoc::%player%} is not set:
+					if {{@storage}::%arg-2%::1::location} is set:
+						if {{@storage}::%arg-2%::1::movement} is set:
+							send "{@prefix} &7Scene Started!" to player
+							startScene(arg-2, player)
+							exit
+			send "{@prefix} {@invalidArgs}" to player
+			exit
+		send "{@prefix} {@invalidArgs}" to player
+		exit
+
+on unload:
+	set {{@storage}.loadtime} to now
+	broadcast "{@prefix} &7Reloading..."
+	logInfo("Reloading...")
+on load:
+	if {{@storage}.loadtime} is not set:
+		set {{@storage}.loadtime} to now
+	wait 1 tick
+	set {_loadtime} to difference between {{@storage}.loadtime} and now
+	broadcast "{@prefix} &7Scenes Reloaded! &8(&f%{_loadtime}%&8)"
+	logInfo("Reloaded! (%{_loadtime}%)")
+
+on join:
+	if {logLoc::%player%} is set:
+		wait 1 tick
+		set player's gamemode to {@loginErrorGamemode}
+		teleport player to {logLoc::%player%}
+		delete {logLoc::%player%}
+		wait 1 seconds
+		send "{@prefix} &cYou logged in while playing a scene! You have been teleported to your last known location!" to player
+		remove slowness from player
+		logError("%player% logged in while in a scene!", "%script%.sk")
+		logError("Teleporting player to last known location!", "%script%.sk")
+
+function startScene(name: text, player: player):
+	if {logLoc::%{_player}%} is set:
+		exit
+	apply slowness of tier 4 to {_player} for 30 minutes
+	apply blindness of tier 4 to {_player} for 1 second
+	set {logLoc::%{_player}%} to {_player}'s location
+	set {_prevloc} to {_player}'s location
+	set {_gamemode} to {_player}'s gamemode
+	if {{@storage}::%{_name}%::1::location} is set:
+		if {{@storage}::%{_name}%::1::movement} is set:
+			set {_player}'s gamemode to spectator
+			loop integers between 1 and 50:
+				if {{@storage}::%{_name}%::%loop-integer%::location} is set:
+					if {{@storage}::%{_name}%::%loop-integer%::movement} is set:
+						teleport {_player} to {{@storage}::%{_name}%::%loop-integer%::location}
+						wait 1 tick
+						teleport {_player} to {{@storage}::%{_name}%::%loop-integer%::location}
+						wait 1 tick
+						teleport {_player} to {{@storage}::%{_name}%::%loop-integer%::location}
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 1:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters north of {_player}
+								set {_loc} to location 0.025 meters above {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 2:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters south of {_player}
+								set {_loc} to location 0.025 meters above {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 3:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters east of {_player}
+								set {_loc} to location 0.025 meters above {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 4:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters west of {_player}
+								set {_loc} to location 0.025 meters above {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 5:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters north of {_player}
+								set {_loc} to location 0.025 meters below {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 6:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters south of {_player}
+								set {_loc} to location 0.025 meters below {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 7:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters east of {_player}
+								set {_loc} to location 0.025 meters below {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is 8:
+							loop 200 times:
+								wait 1 tick
+								set {_loc} to location 0.1 meters west of {_player}
+								set {_loc} to location 0.025 meters below {_loc}
+								teleport {_player} to {_loc}
+								{_player} is offline:
+									exit
+
+						if {{@storage}::%{_name}%::%loop-integer%::movement} is not 1,2,3,4,5,6,7 or 8:
+							send "{@prefix} &cAn error occured wile trying to play this scene! Check console for more information!" to {_player}
+							logError("An error occured in scene %{_name}%!", "%script%.sk")
+							logError("A scene could not be played! Variables for the scene are either invalid or not set!", "%script%.sk")
+							kick {_player} due to "&cAn error occured while trying to play a scene!"
+							exit
+			teleport {_player} to {_prevloc}
+			set {_player}'s gamemode to {_gamemode}
+			delete {logLoc::%{_player}%}
+			remove slowness from {_player}
+			exit
+	remove slowness from {_player}
+	set {_player}'s gamemode to {_gamemode}
+	teleport {_player} to {_prevloc}
+	delete {logLoc::%{_player}%}
+	send "{@prefix} &cAn error occured wile trying to play this scene! Check console for more information!" to {_player}
+	logError("An error occured in scene %{_name}%!", "%script%.sk")
+	logError("A scene could not be played! Variables for the scene are either invalid or not set!", "%script%.sk")
+
+function logInfo(message: text):
+	log info "%{_message}%"
+function logWarn(message: text, prefix: text):
+	log warn "[%{_prefix}%] %{_message}%"
+function logError(message: text, prefix: text):
+	log error "[%{_prefix}%] %{_message}%"
